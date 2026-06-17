@@ -1,0 +1,8 @@
+### IDE/System
+.idea
+.vscode
+.DS_Store
+
+# DDEV local, gitignored config (tokens, identity) — never commit
+.ddev/*.local.yaml
+.ddev/.env
