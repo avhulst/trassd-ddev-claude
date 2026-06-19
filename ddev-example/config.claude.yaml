@@ -19,3 +19,6 @@ hooks:
         rm -rf "${HOME}/.claude" "${HOME}/.claude.json" 2>/dev/null || true
         ln -s "${CC_DIR}/.claude.json" "${HOME}/.claude.json"
         ln -s "${CC_DIR}/.claude" "${HOME}/.claude"
+        mkdir -p "${HOME}/.local/bin/"
+        ln -s "/usr/local/bin/claude" "${HOME}/.local/bin/claude"
+        export PATH="${HOME}/.local/bin:${PATH}"
