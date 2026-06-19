@@ -22,3 +22,36 @@ hooks:
         mkdir -p "${HOME}/.local/bin/"
         ln -s "/usr/local/bin/claude" "${HOME}/.local/bin/claude"
         export PATH="${HOME}/.local/bin:${PATH}"
+
+        set -euo pipefail
+        
+        MARKETPLACES=(
+            "https://github.com/anthropics/claude-plugins-official"
+        )
+        
+        PLUGINS=(
+            "context7@claude-plugins-official"
+            "php-lsp@claude-plugins-official"
+            "code-simplifier@claude-plugins-official"
+            "code-review@claude-plugins-official"
+            "security-guidance@claude-plugins-official"
+        )
+        
+        INSTALLED_PLUGINS=$(claude plugin list --json)
+        INSTALLED_MARKETPLACES=$(claude plugin marketplace list --json)
+        
+        for MARKETPLACE in "${MARKETPLACES[@]}"; do
+            if echo "$INSTALLED_MARKETPLACES" | jq -e --arg marketplace "$MARKETPLACE" '.[] | select(.id == $marketplace)' > /dev/null; then
+            continue
+        fi
+        
+        claude plugin marketplace add "$MARKETPLACE"
+        done
+        
+        for PLUGIN in "${PLUGINS[@]}"; do
+            if echo "$INSTALLED_PLUGINS" | jq -e --arg plugin "$PLUGIN" '.[] | select(.id == $plugin)' > /dev/null; then
+            continue
+        fi
+        
+        claude plugin install "$PLUGIN"
+        done
