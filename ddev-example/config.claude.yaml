@@ -27,7 +27,6 @@ hooks:
               
               MARKETPLACES=(
                   "https://github.com/anthropics/claude-plugins-official"
-                  "https://github.com/zone1987/claude-a-dev-team"
               )
               
               PLUGINS=(
