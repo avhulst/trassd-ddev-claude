@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Integration tests for the claude-code DDEV add-on.
+# Integration tests for the trassd-ddev-claude DDEV add-on.
 # Run from the repo root: bats tests/test.bats
 # Needs ddev, docker and bats-core with bats-support, bats-assert, bats-file.
 
@@ -12,7 +12,7 @@ setup() {
   bats_load_library bats-file
 
   export DIR="$(cd "$(dirname "${BATS_TEST_FILENAME}")/.." >/dev/null 2>&1 && pwd)"
-  export PROJNAME="test-ddev-claude-image"
+  export PROJNAME="test-trassd-ddev-claude"
   mkdir -p ~/tmp
   export TESTDIR="$(mktemp -d ~/tmp/${PROJNAME}.XXXXXX)"
   export DDEV_NONINTERACTIVE=true
@@ -85,12 +85,12 @@ DOCKERFILE
 
 @test "add-on remove deletes all project files" {
   install_addon
-  run ddev add-on remove claude-code
+  run ddev add-on remove trassd-ddev-claude
   assert_success
-  assert_file_not_exist .ddev/web-build/Dockerfile.claude-code
+  assert_file_not_exist .ddev/web-build/Dockerfile.trassd-ddev-claude
   assert_file_not_exist .ddev/web-build/claude-wrapper.sh
   assert_file_not_exist .ddev/commands/web/claude
-  assert_file_not_exist .ddev/config.claude-code.yaml
+  assert_file_not_exist .ddev/config.trassd-ddev-claude.yaml
 }
 
 @test "migrates legacy .claude.json and keeps existing state" {

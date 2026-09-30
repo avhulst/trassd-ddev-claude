@@ -1,5 +1,5 @@
 #ddev-generated
-# Claude Code state persistence for the claude-code add-on.
+# Claude Code state persistence for the trassd-ddev-claude add-on.
 #
 # Claude's config lives in DDEV's global cache volume, which survives
 # `ddev restart`, `ddev rebuild`, `ddev poweroff` and `ddev delete`, stays out

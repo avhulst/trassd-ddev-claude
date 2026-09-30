@@ -1,4 +1,4 @@
-# ddev-claude-image
+# trassd-ddev-claude
 
 DDEV-Add-on, das **Claude Code** in den Web-Container bringt, plus die GitHub Action,
 die das dafür genutzte schlanke „nur Claude"-Image täglich nach GHCR baut.
@@ -13,7 +13,7 @@ die das dafür genutzte schlanke „nur Claude"-Image täglich nach GHCR baut.
 ## Installation
 
 ```bash
-ddev add-on get avhulst/ddev-claude-image
+ddev add-on get avhulst/trassd-ddev-claude
 ddev restart
 ddev claude
 ```
@@ -107,9 +107,16 @@ ddev claude plugin install context7@claude-plugins-official
    ddev exec 'cd /mnt/ddev-global-cache/claude-code/shared/.claude/projects && mkdir -p "$DDEV_PROJECT" && cp -a -- -var-www-html/. "$DDEV_PROJECT"/'
    ```
 
+## Umstieg vom früheren Add-on-Namen `claude-code`
+
+Das Add-on hieß früher `claude-code`. Nach `ddev add-on get avhulst/trassd-ddev-claude`
+die alten Dateien aus `.ddev/` löschen, sonst laufen Hook und Dockerfile doppelt:
+`config.claude-code.yaml` und `web-build/Dockerfile.claude-code`. Login, Sessions und
+Memory bleiben erhalten, weil das Cache-Verzeichnis unverändert ist.
+
 ## Version pinnen
 
-`.ddev/web-build/Dockerfile.claude-code` bezieht standardmäßig `:latest`. Zum Pinnen die
+`.ddev/web-build/Dockerfile.trassd-ddev-claude` bezieht standardmäßig `:latest`. Zum Pinnen die
 Zeile `#ddev-generated` entfernen (sonst überschreibt ein Add-on-Update die Datei) und
 den Tag ändern, z. B. `ghcr.io/avhulst/claude-code:2.1.235`.
 
@@ -137,7 +144,7 @@ den Tag ändern, z. B. `ghcr.io/avhulst/claude-code:2.1.235`.
 ## Entfernen
 
 ```bash
-ddev add-on remove claude-code
+ddev add-on remove trassd-ddev-claude
 ddev restart
 ```
 

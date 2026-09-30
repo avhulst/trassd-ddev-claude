@@ -1,9 +1,9 @@
-name: claude-code
+name: trassd-ddev-claude
 
 project_files:
-  - web-build/Dockerfile.claude-code
+  - web-build/Dockerfile.trassd-ddev-claude
   - web-build/claude-wrapper.sh
   - commands/web/claude
-  - config.claude-code.yaml
+  - config.trassd-ddev-claude.yaml
 
 ddev_version_constraint: '>= v1.24.0'

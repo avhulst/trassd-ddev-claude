@@ -1,6 +1,6 @@
 #!/bin/bash
 #ddev-generated
-# Claude Code wrapper installed by the claude-code DDEV add-on.
+# Claude Code wrapper installed by the trassd-ddev-claude DDEV add-on.
 #
 # Keeps Claude's config in DDEV's global cache (survives restart/rebuild/delete)
 # and names the per-project state dir (sessions, memory) after the DDEV project
