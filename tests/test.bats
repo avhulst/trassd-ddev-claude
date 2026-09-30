@@ -70,12 +70,17 @@ install_addon() {
 
 @test "coexists with a project's own web-build Dockerfile" {
   mkdir -p .ddev/web-build
-  echo 'RUN touch /usr/local/share/project-dockerfile-applied' > .ddev/web-build/Dockerfile
+  # Includes the leftover COPY line of the old ddev-example setup: the wrapper
+  # must still end up as /usr/local/bin/claude.
+  cat > .ddev/web-build/Dockerfile <<'DOCKERFILE'
+RUN touch /usr/local/share/project-dockerfile-applied
+COPY --from=ghcr.io/avhulst/claude-code:latest /usr/local/bin/claude /usr/local/bin/claude
+DOCKERFILE
   install_addon
   run ddev exec test -f /usr/local/share/project-dockerfile-applied
   assert_success
-  run ddev exec claude --version
-  assert_success
+  run ddev exec head -c 2 /usr/local/bin/claude
+  assert_output "#!"
 }
 
 @test "add-on remove deletes all project files" {
@@ -96,8 +101,10 @@ install_addon() {
   assert_success
   run ddev exec cat "${CACHE_DIR}/.claude/.claude.json"
   assert_output '{"legacy":true}'
-  run ddev exec test -e "${CACHE_DIR}/.claude.json"
-  assert_failure
+  # The legacy path stays as a symlink, so projects on the old setup keep
+  # sharing the same state instead of recreating an empty '{}' file.
+  run ddev exec readlink "${CACHE_DIR}/.claude.json"
+  assert_output ".claude/.claude.json"
   run ddev exec cat "${CACHE_DIR}/.claude/.credentials.json"
   assert_output "creds"
 
@@ -125,4 +132,18 @@ install_addon() {
   install_addon
   run ddev exec cat "${CACHE_DIR}/.claude/.credentials.json"
   assert_output "creds"
+}
+
+@test "legacy hook of an old-setup project does not replace the shared config" {
+  install_addon
+  ddev exec "rm -f ${CACHE_DIR}/.claude/.claude.json && echo '{\"legacy\":true}' > ${CACHE_DIR}/.claude.json"
+  run ddev restart -y
+  assert_success
+  # What the old ddev-example hook runs in every other project on start:
+  run ddev exec "[ -f ${CACHE_DIR}/.claude.json ] || echo '{}' > ${CACHE_DIR}/.claude.json"
+  assert_success
+  run ddev exec cat "${CACHE_DIR}/.claude.json"
+  assert_output '{"legacy":true}'
+  run ddev exec cat "${CACHE_DIR}/.claude/.claude.json"
+  assert_output '{"legacy":true}'
 }

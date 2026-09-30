@@ -13,7 +13,9 @@ hooks:
               cache_dir="${CLAUDE_CODE_CACHE_DIR:-/mnt/ddev-global-cache/claude-code/shared}"
               mkdir -p "${cache_dir}/.claude"
               # Migrate the pre-add-on layout: with CLAUDE_CONFIG_DIR set, Claude
-              # keeps .claude.json inside the config dir. Never overwrite.
+              # keeps .claude.json inside the config dir. Never overwrite. The
+              # symlink keeps projects still on the old setup on the same file.
               if [ -f "${cache_dir}/.claude.json" ] && [ ! -e "${cache_dir}/.claude/.claude.json" ]; then
                   mv "${cache_dir}/.claude.json" "${cache_dir}/.claude/.claude.json"
+                  ln -s .claude/.claude.json "${cache_dir}/.claude.json"
               fi

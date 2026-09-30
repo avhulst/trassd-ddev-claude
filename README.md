@@ -82,7 +82,10 @@ ddev claude plugin install context7@claude-plugins-official
    `homeadditions/.bashrc.d/local-bin-path.sh`.
 2. Add-on installieren (siehe oben).
 3. Der Login wird beim ersten Start automatisch übernommen: Die alte
-   `shared/.claude.json` wandert nach `shared/.claude/.claude.json`.
+   `shared/.claude.json` wandert nach `shared/.claude/.claude.json`. An der alten Stelle
+   bleibt ein Symlink zurück, sodass Projekte, die noch das alte Setup nutzen, weiter
+   denselben Login und dieselben Einstellungen sehen. Alte und neue Projekte können also
+   eine Weile parallel laufen.
 4. Alte Sessions und Memory aller Projekte liegen gemischt in
    `shared/.claude/projects/-var-www-html/`. Wer sie behalten will, verschiebt sie
    von Hand in den neuen Projektordner:
