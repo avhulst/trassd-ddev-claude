@@ -1,0 +1,42 @@
+name: tests
+
+# Runs the add-on tests (tests/*.bats) on every push/PR and weekly, so a
+# behaviour change in a new Claude Code release (e.g. CLAUDE_CODE_PROJECT_DIR_NAME
+# being dropped) shows up even without code changes here.
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+  schedule:
+    - cron: "30 7 * * 1" # Mondays 07:30 UTC, after the daily image build
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: "Debug with tmate"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    strategy:
+      matrix:
+        ddev_version: [stable, HEAD]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ddev/github-action-add-on-test@v2
+        with:
+          ddev_version: ${{ matrix.ddev_version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          debug_enabled: ${{ github.event.inputs.debug_enabled }}
+          addon_repository: ${{ github.repository }}
+          addon_ref: ${{ github.ref }}
