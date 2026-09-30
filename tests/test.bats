@@ -87,3 +87,42 @@ install_addon() {
   assert_file_not_exist .ddev/commands/web/claude
   assert_file_not_exist .ddev/config.claude-code.yaml
 }
+
+@test "migrates legacy .claude.json and keeps existing state" {
+  install_addon
+  # Old layout: .claude.json next to .claude/, credentials inside .claude/.
+  ddev exec "rm -f ${CACHE_DIR}/.claude/.claude.json && echo '{\"legacy\":true}' > ${CACHE_DIR}/.claude.json && echo creds > ${CACHE_DIR}/.claude/.credentials.json"
+  run ddev restart -y
+  assert_success
+  run ddev exec cat "${CACHE_DIR}/.claude/.claude.json"
+  assert_output '{"legacy":true}'
+  run ddev exec test -e "${CACHE_DIR}/.claude.json"
+  assert_failure
+  run ddev exec cat "${CACHE_DIR}/.claude/.credentials.json"
+  assert_output "creds"
+
+  # A second restart must be a no-op.
+  run ddev restart -y
+  assert_success
+  run ddev exec cat "${CACHE_DIR}/.claude/.claude.json"
+  assert_output '{"legacy":true}'
+}
+
+@test "migration never overwrites an existing config" {
+  install_addon
+  ddev exec "echo '{\"new\":true}' > ${CACHE_DIR}/.claude/.claude.json && echo '{\"legacy\":true}' > ${CACHE_DIR}/.claude.json"
+  run ddev restart -y
+  assert_success
+  run ddev exec cat "${CACHE_DIR}/.claude/.claude.json"
+  assert_output '{"new":true}'
+  run ddev exec cat "${CACHE_DIR}/.claude.json"
+  assert_output '{"legacy":true}'
+}
+
+@test "re-installing the add-on keeps login state" {
+  install_addon
+  ddev exec "echo creds > ${CACHE_DIR}/.claude/.credentials.json"
+  install_addon
+  run ddev exec cat "${CACHE_DIR}/.claude/.credentials.json"
+  assert_output "creds"
+}

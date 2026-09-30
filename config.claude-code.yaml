@@ -12,3 +12,8 @@ hooks:
               set -eu
               cache_dir="${CLAUDE_CODE_CACHE_DIR:-/mnt/ddev-global-cache/claude-code/shared}"
               mkdir -p "${cache_dir}/.claude"
+              # Migrate the pre-add-on layout: with CLAUDE_CONFIG_DIR set, Claude
+              # keeps .claude.json inside the config dir. Never overwrite.
+              if [ -f "${cache_dir}/.claude.json" ] && [ ! -e "${cache_dir}/.claude/.claude.json" ]; then
+                  mv "${cache_dir}/.claude.json" "${cache_dir}/.claude/.claude.json"
+              fi
