@@ -1,0 +1,14 @@
+#ddev-generated
+# Claude Code state persistence for the claude-code add-on.
+#
+# Claude's config lives in DDEV's global cache volume, which survives
+# `ddev restart`, `ddev rebuild`, `ddev poweroff` and `ddev delete`, stays out
+# of Mutagen sync and never lands in git. The claude wrapper points
+# CLAUDE_CONFIG_DIR there; login, settings and plugins are shared across
+# projects, sessions and memory are kept per DDEV project.
+hooks:
+    post-start:
+        - exec: |
+              set -eu
+              cache_dir="${CLAUDE_CODE_CACHE_DIR:-/mnt/ddev-global-cache/claude-code/shared}"
+              mkdir -p "${cache_dir}/.claude"

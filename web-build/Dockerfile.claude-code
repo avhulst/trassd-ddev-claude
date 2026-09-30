@@ -1,0 +1,8 @@
+#ddev-generated
+# Pulls the prebuilt Claude Code binary into DDEV's web image and puts a small
+# wrapper in front of it (see claude-wrapper.sh). DDEV appends this fragment
+# after its own `FROM $BASE_IMAGE`; files in .ddev/web-build are the build context.
+#
+# To pin a version (e.g. :2.1.235), remove the #ddev-generated line and change the tag.
+COPY --from=ghcr.io/avhulst/claude-code:latest /usr/local/bin/claude /usr/local/lib/claude-code/claude
+COPY --chmod=755 claude-wrapper.sh /usr/local/bin/claude
