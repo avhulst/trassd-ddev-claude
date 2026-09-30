@@ -37,6 +37,8 @@ teardown() {
   ddev exec rm -rf "${CACHE_DIR}" >/dev/null 2>&1 || true
   ddev delete -Oy "${PROJNAME}" >/dev/null 2>&1 || true
   [ "${TESTDIR}" != "" ] && rm -rf "${TESTDIR}"
+  # Never leave the fake stale image from the refresh test behind.
+  docker pull -q ghcr.io/avhulst/claude-code:latest >/dev/null 2>&1 || true
 }
 
 install_addon() {
@@ -164,4 +166,16 @@ DOCKERFILE
   refute_output --partial "variable is not set"
   run ddev exec 'echo "[${CLAUDE_CODE_OAUTH_TOKEN:-}|${CONTEXT7_API_KEY:-}]"'
   assert_output "[|]"
+}
+
+@test "start refreshes a stale local claude image" {
+  # Fake an outdated local :latest; without a pull, the build would copy it.
+  printf '%s\n' 'FROM busybox' \
+    'RUN mkdir -p /usr/local/bin && printf "#!/bin/sh\necho 0.0.0-stale\n" > /usr/local/bin/claude && chmod 755 /usr/local/bin/claude' \
+    | docker build -q -t ghcr.io/avhulst/claude-code:latest - >/dev/null
+  install_addon
+  run ddev exec claude --version
+  assert_success
+  refute_output --partial "0.0.0-stale"
+  assert_output --partial "Claude Code"
 }

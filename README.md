@@ -114,11 +114,19 @@ die alten Dateien aus `.ddev/` löschen, sonst laufen Hook und Dockerfile doppel
 `config.claude-code.yaml` und `web-build/Dockerfile.claude-code`. Login, Sessions und
 Memory bleiben erhalten, weil das Cache-Verzeichnis unverändert ist.
 
-## Version pinnen
+## Updates und Version pinnen
 
-`.ddev/web-build/Dockerfile.trassd-ddev-claude` bezieht standardmäßig `:latest`. Zum Pinnen die
-Zeile `#ddev-generated` entfernen (sonst überschreibt ein Add-on-Update die Datei) und
-den Tag ändern, z. B. `ghcr.io/avhulst/claude-code:2.1.235`.
+`.ddev/web-build/Dockerfile.trassd-ddev-claude` bezieht standardmäßig `:latest`. Docker
+aktualisiert ein lokal vorhandenes `:latest` nie von selbst, und der Build würde sonst
+diese veraltete Kopie nehmen. Deshalb führt das Add-on vor jedem `ddev start` bzw.
+`ddev restart` auf dem Host `docker pull ghcr.io/avhulst/claude-code:latest` aus. Eine
+neue Claude-Version kommt also mit dem nächsten Restart. Offline oder bei einem Fehler
+startet DDEV trotzdem, dann mit der vorhandenen Version.
+
+Zum Pinnen die Zeile `#ddev-generated` aus dem Dockerfile entfernen (sonst überschreibt
+ein Add-on-Update die Datei) und den Tag ändern, z. B.
+`ghcr.io/avhulst/claude-code:2.1.235`. Der Pull-Hook zieht dann zwar weiterhin
+`:latest`, das gepinnte Image ist davon aber nicht betroffen.
 
 ## Bekannte Einschränkungen
 
