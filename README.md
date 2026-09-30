@@ -26,7 +26,19 @@ derselben Konfiguration.
 - **Interaktiv:** beim ersten `ddev claude` `/login` durchlaufen. Der Login liegt im
   globalen Cache und übersteht `restart`, `rebuild`, `poweroff` und `delete`.
 - **Headless / zum Teilen:** auf einer Maschine mit Browser `claude setup-token`
-  ausführen und den Token über eine **gitignorte** lokale Config einspeisen:
+  ausführen und den Token in der Host-Shell exportieren, z. B. in `~/.zshrc`:
+
+  ```bash
+  export CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
+  export CONTEXT7_API_KEY=ctx7sk-...   # optional, für das Context7-Plugin
+  ```
+
+  Das Add-on reicht `CLAUDE_CODE_OAUTH_TOKEN` und `CONTEXT7_API_KEY` per
+  `web_environment` in den Web-Container durch. Die Werte werden beim `ddev start` bzw.
+  `ddev restart` aus der Shell gelesen, in der der Befehl läuft. Nach einer Änderung also
+  neu starten. Nicht gesetzte Variablen bleiben leer, dann gilt der normale `/login`.
+
+  Alternativ pro Projekt über eine **gitignorte** lokale Config:
 
   ```yaml
   # .ddev/config.token.local.yaml  (gitignored)
@@ -34,7 +46,8 @@ derselben Konfiguration.
     - CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
   ```
 
-**Niemals** Credentials oder Token ins Image backen.
+**Niemals** Credentials oder Token ins Image backen oder in eine versionierte Datei
+schreiben.
 
 ## Wo Claude seine Daten ablegt
 

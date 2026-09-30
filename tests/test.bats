@@ -147,3 +147,21 @@ DOCKERFILE
   run ddev exec cat "${CACHE_DIR}/.claude/.claude.json"
   assert_output '{"legacy":true}'
 }
+
+@test "passes tokens from the host environment" {
+  export CLAUDE_CODE_OAUTH_TOKEN=test-oauth-token CONTEXT7_API_KEY=test-context7-key
+  install_addon
+  run ddev exec 'echo "${CLAUDE_CODE_OAUTH_TOKEN}|${CONTEXT7_API_KEY}"'
+  assert_success
+  assert_output "test-oauth-token|test-context7-key"
+}
+
+@test "restarts without warnings when tokens are not set on the host" {
+  unset CLAUDE_CODE_OAUTH_TOKEN CONTEXT7_API_KEY
+  install_addon
+  run ddev restart -y
+  assert_success
+  refute_output --partial "variable is not set"
+  run ddev exec 'echo "[${CLAUDE_CODE_OAUTH_TOKEN:-}|${CONTEXT7_API_KEY:-}]"'
+  assert_output "[|]"
+}

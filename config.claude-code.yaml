@@ -6,6 +6,12 @@
 # of Mutagen sync and never lands in git. The claude wrapper points
 # CLAUDE_CONFIG_DIR there; login, settings and plugins are shared across
 # projects, sessions and memory are kept per DDEV project.
+#
+# Tokens are taken from the host shell at `ddev start` (export them e.g. in
+# ~/.zshrc); unset ones stay empty, which Claude and Context7 treat as absent.
+web_environment:
+    - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
+    - CONTEXT7_API_KEY=${CONTEXT7_API_KEY:-}
 hooks:
     post-start:
         - exec: |
