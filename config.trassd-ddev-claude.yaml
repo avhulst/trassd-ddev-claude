@@ -13,6 +13,10 @@ web_environment:
     - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
     - CONTEXT7_API_KEY=${CONTEXT7_API_KEY:-}
 hooks:
+    # Docker never refreshes a local :latest on its own, and the web-build copies
+    # whatever is local. Pull first; offline or on errors keep the current one.
+    pre-start:
+        - exec-host: docker pull -q ghcr.io/avhulst/claude-code:latest >/dev/null 2>&1 || true
     post-start:
         - exec: |
               set -eu
