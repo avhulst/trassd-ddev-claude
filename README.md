@@ -1,88 +1,44 @@
-# ddev-claude-image
+# trassd-ddev-claude
 
-Baut ein schlankes, wiederverwendbares **„nur Claude Code"-Image** und veröffentlicht es
-täglich automatisch nach GitHub Container Registry (GHCR). DDEV-Projekte ziehen das
-Binary dann per einer einzigen `COPY --from=…`-Zeile in ihr Webserver-Image — ohne
-Installation pro Projekt und ohne das DDEV-Webserver-Image zu ersetzen.
+DDEV-Add-on, das **Claude Code** in den Web-Container bringt, plus die GitHub Action,
+die das dafür genutzte schlanke „nur Claude"-Image täglich nach GHCR baut.
 
-## Warum dieser Ansatz
+- **Keine Installation pro Projekt:** Das Binary kommt per `COPY --from=…` aus einem
+  gecachten Image, das DDEV-Webserver-Image wird nicht ersetzt.
+- **Einmal einloggen, überall nutzen:** Login, Settings und Plugins liegen im globalen
+  DDEV-Cache und gelten für alle Projekte.
+- **Getrennter Kontext pro Projekt:** Sessions und Memory liegen unter dem
+  **DDEV-Projektnamen**, nicht unter `/var/www/html`, das bei jedem Projekt gleich ist.
 
-- **Keine Installation pro Projekt:** kein `curl | install.sh` bei jedem `ddev restart`,
-  nur ein schneller Datei-Copy aus einem gecachten Image.
-- **Keine DDEV-Versionskopplung:** Du ersetzt das Webserver-Image *nicht* (`webimage`),
-  sondern legst nur eine `COPY`-Zeile obendrauf. DDEV pflegt die Basis weiter.
-- **Immer aktuell:** Die Action baut täglich neu und veröffentlicht nur, wenn npm
-  tatsächlich eine neuere Claude-Code-Version hat.
-
-## Struktur
-
-```
-.
-├── .github/workflows/build.yml   # tägliche Build+Push-Action (GHCR)
-├── claude-code/Dockerfile        # das "nur Claude"-Image (Multi-Stage)
-└── ddev-example/                 # zum Kopieren in dein/e Projekt/e nach .ddev/
-    ├── web-build/Dockerfile      # COPY --from=ghcr.io/OWNER/claude-code:latest
-    ├── commands/web/claude       # das `ddev claude`-Kommando
-    └── config.claude.yaml        # Auth-Persistenz-Hook
-```
-
-## Einrichtung
-
-1. **Repo anlegen und pushen** (ersetze `OWNER`):
-
-   ```bash
-   gh repo create OWNER/ddev-claude-image --public --source=. --remote=origin --push
-   # oder klassisch:
-   # git init && git add . && git commit -m "init" \
-   #   && git remote add origin git@github.com:OWNER/ddev-claude-image.git \
-   #   && git push -u origin main
-   ```
-
-2. **Action einmal manuell starten** (Tab *Actions* → *build-claude-code-image* →
-   *Run workflow*), damit das erste Image entsteht. Danach läuft sie täglich um
-   06:00 UTC von selbst. Es ist keine zusätzliche Secret-Konfiguration nötig — die
-   Action nutzt das eingebaute `GITHUB_TOKEN` zum Push nach GHCR.
-
-3. **GHCR-Paket sichtbar machen:** Ein neu gepushtes GHCR-Paket ist standardmäßig
-   *privat*. Für reibungsloses Ziehen gibt es zwei Optionen:
-   - **Public:** Paket-Einstellungen → *Package settings* → *Change visibility* →
-     *Public*. Dann kann jeder ohne Login `COPY --from=…` nutzen.
-   - **Privat:** Auf jeder Dev-Maschine einmal `docker login ghcr.io` (mit einem
-     GitHub-Token mit `read:packages`), damit der lokale Docker-Daemon das Image
-     beim DDEV-Build ziehen darf.
-
-## Nutzung in einem DDEV-Projekt
-
-Kopiere die drei Dateien aus `ddev-example/` in das `.ddev/`-Verzeichnis deines
-Projekts und ersetze `OWNER` in `web-build/Dockerfile` durch deinen GHCR-Namespace:
-
-```
-.ddev/web-build/Dockerfile
-.ddev/commands/web/claude
-.ddev/config.claude.yaml
-```
-
-Dann:
+## Installation
 
 ```bash
-ddev restart      # baut das Webimage einmal neu und kopiert das Binary hinein
-ddev claude       # startet Claude Code im Web-Container
+ddev add-on get avhulst/trassd-ddev-claude
+ddev restart
+ddev claude
 ```
 
-Pinne für reproduzierbare Builds auf eine Version statt `:latest`, z. B.
-`COPY --from=ghcr.io/OWNER/claude-code:2.1.179 …`.
+`claude` funktioniert auch in `ddev ssh`, `ddev exec` und in Hooks, überall mit
+derselben Konfiguration.
 
 ## Authentifizierung (Pro/Max/Team)
 
-Das Abo authentifiziert über **OAuth, nicht über einen API-Key**:
+- **Interaktiv:** beim ersten `ddev claude` `/login` durchlaufen. Der Login liegt im
+  globalen Cache und übersteht `restart`, `rebuild`, `poweroff` und `delete`.
+- **Headless / zum Teilen:** auf einer Maschine mit Browser `claude setup-token`
+  ausführen und den Token in der Host-Shell exportieren, z. B. in `~/.zshrc`:
 
-- **Interaktiv (lokal am einfachsten):** beim ersten `ddev claude` `/login` durchlaufen.
-  Die Credentials landen in `~/.claude` und werden vom Hook ins globale Cache-Volume
-  symlinkt — der Login hält über Rebuilds.
-- **Headless / zum Teilen:** auf einer Maschine mit Browser einmal `claude setup-token`
-  ausführen und den Token als `CLAUDE_CODE_OAUTH_TOKEN` über eine **gitignorte** lokale
-  Config einspeisen (`setup-token` setzt einen Pro-, Max-, Team- oder Enterprise-Plan
-  voraus):
+  ```bash
+  export CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
+  export CONTEXT7_API_KEY=ctx7sk-...   # optional, für das Context7-Plugin
+  ```
+
+  Das Add-on reicht `CLAUDE_CODE_OAUTH_TOKEN` und `CONTEXT7_API_KEY` per
+  `web_environment` in den Web-Container durch. Die Werte werden beim `ddev start` bzw.
+  `ddev restart` aus der Shell gelesen, in der der Befehl läuft. Nach einer Änderung also
+  neu starten. Nicht gesetzte Variablen bleiben leer, dann gilt der normale `/login`.
+
+  Alternativ pro Projekt über eine **gitignorte** lokale Config:
 
   ```yaml
   # .ddev/config.token.local.yaml  (gitignored)
@@ -90,43 +46,167 @@ Das Abo authentifiziert über **OAuth, nicht über einen API-Key**:
     - CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
   ```
 
-**Niemals** Credentials oder Token ins Image backen — Auth bleibt strikt zur Laufzeit
-(Volume oder Env-Var).
+**Niemals** Credentials oder Token ins Image backen oder in eine versionierte Datei
+schreiben.
 
-## Wie die tägliche Action arbeitet
+## Wo Claude seine Daten ablegt
 
-1. Liest die neueste veröffentlichte Version via `npm view @anthropic-ai/claude-code version`.
-2. Prüft, ob dieser Version-Tag in GHCR bereits existiert → wenn ja, **Abbruch ohne Push**.
+```
+/mnt/ddev-global-cache/claude-code/shared/.claude/
+├── .credentials.json, .claude.json, settings.json, plugins/ …   # geteilt
+└── projects/
+    ├── <projekt-a>/      # Sessions + memory/ von DDEV-Projekt "projekt-a"
+    └── <projekt-b>/
+```
+
+Das erledigt ein Wrapper unter `/usr/local/bin/claude`, der vor dem Start des echten
+Binarys (`/usr/local/lib/claude-code/claude`) diese Variablen setzt, jeweils nur, wenn
+sie noch nicht gesetzt sind:
+
+| Variable | Standard |
+|---|---|
+| `CLAUDE_CODE_CACHE_DIR` | `/mnt/ddev-global-cache/claude-code/shared` |
+| `CLAUDE_CONFIG_DIR` | `$CLAUDE_CODE_CACHE_DIR/.claude` |
+| `CLAUDE_CODE_PROJECT_DIR_NAME` | `$DDEV_PROJECT`, auf `A-Z a-z 0-9 _ -` bereinigt, max. 64 Zeichen |
+| `DISABLE_AUTOUPDATER` | `1` (Updates kommen über das Image) |
+
+Überschreiben geht per `web_environment` in einer eigenen `.ddev/config.*.yaml`, z. B.
+für einen eigenen, nicht geteilten Login pro Projekt:
+
+```yaml
+web_environment:
+  - CLAUDE_CODE_CACHE_DIR=/mnt/ddev-global-cache/claude-code/mein-projekt
+```
+
+## Plugins
+
+Das Add-on installiert keine Plugins. Einmal im Container installieren genügt, weil
+das Config-Verzeichnis geteilt und dauerhaft ist:
+
+```bash
+ddev claude plugin marketplace add https://github.com/anthropics/claude-plugins-official
+ddev claude plugin install context7@claude-plugins-official
+```
+
+## Umstieg von der alten `ddev-example/`-Kopie
+
+1. Alte Dateien aus `.ddev/` entfernen: `web-build/Dockerfile` (nur die `COPY`-Zeile
+   für Claude), `commands/web/claude`, `config.claude.yaml`,
+   `homeadditions/.bashrc.d/local-bin-path.sh`.
+2. Add-on installieren (siehe oben).
+3. Der Login wird beim ersten Start automatisch übernommen: Die alte
+   `shared/.claude.json` wandert nach `shared/.claude/.claude.json`. An der alten Stelle
+   bleibt ein Symlink zurück, sodass Projekte, die noch das alte Setup nutzen, weiter
+   denselben Login und dieselben Einstellungen sehen. Alte und neue Projekte können also
+   eine Weile parallel laufen.
+4. Alte Sessions und Memory aller Projekte liegen gemischt in
+   `shared/.claude/projects/-var-www-html/`. Wer sie behalten will, verschiebt sie
+   von Hand in den neuen Projektordner:
+
+   ```bash
+   ddev exec 'cd /mnt/ddev-global-cache/claude-code/shared/.claude/projects && mkdir -p "$DDEV_PROJECT" && cp -a -- -var-www-html/. "$DDEV_PROJECT"/'
+   ```
+
+## Umstieg vom früheren Add-on-Namen `claude-code`
+
+Das Add-on hieß früher `claude-code`. Nach `ddev add-on get avhulst/trassd-ddev-claude`
+die alten Dateien aus `.ddev/` löschen, sonst laufen Hook und Dockerfile doppelt:
+`config.claude-code.yaml` und `web-build/Dockerfile.claude-code`. Login, Sessions und
+Memory bleiben erhalten, weil das Cache-Verzeichnis unverändert ist.
+
+## Version pinnen
+
+`.ddev/web-build/Dockerfile.trassd-ddev-claude` bezieht standardmäßig `:latest`. Zum Pinnen die
+Zeile `#ddev-generated` entfernen (sonst überschreibt ein Add-on-Update die Datei) und
+den Tag ändern, z. B. `ghcr.io/avhulst/claude-code:2.1.235`.
+
+## Bekannte Einschränkungen
+
+- **Projekteinstellungen in `.claude.json` sind geteilt.** Lokale MCP-Server
+  (`claude mcp add --scope local`), der Trust-Dialog und lokal erlaubte Tools stehen
+  unter dem Pfad `/var/www/html` und gelten damit für alle DDEV-Projekte.
+  Projektspezifisches gehört ins Repo: `.mcp.json` bzw. `.claude/settings.local.json`.
+- **`CLAUDE_CODE_PROJECT_DIR_NAME` ist nicht offiziell dokumentiert.** Die Tests in
+  `tests/test.bats` prüfen die Projektbenennung, und die CI läuft wöchentlich, damit eine
+  Verhaltensänderung in neuen Claude-Versionen auffällt.
+
+## Verworfene Alternativen
+
+- **Symlink `/var/www/<projekt>` → `/var/www/html`:** Claude löst Symlinks auf und
+  landet wieder in `-var-www-html`.
+- **Zweiter Bind-Mount des Projekts unter `/var/www/<projekt>`: nicht mit Mutagen
+  kompatibel.** Mit Mutagen (Standard unter macOS) ist `/var/www/html` ein
+  synchronisiertes Volume. Ein zusätzlicher Bind-Mount umgeht die Synchronisation, ist
+  langsam und zeitweise inkonsistent mit `/var/www/html`.
+- **`~/.claude` mit einzeln verlinkten Einträgen:** fragile Whitelist, die
+  `.claude.json`-Kollision bliebe trotzdem.
+
+## Entfernen
+
+```bash
+ddev add-on remove trassd-ddev-claude
+ddev restart
+```
+
+Login, Sessions und Memory im globalen Cache bleiben erhalten. Komplett löschen
+(betrifft alle Projekte):
+
+```bash
+ddev exec rm -rf /mnt/ddev-global-cache/claude-code
+```
+
+## Tests
+
+```bash
+brew install bats-core && brew tap bats-core/bats-core && brew trust bats-core/bats-core \
+  && brew install bats-support bats-assert bats-file
+bats tests/wrapper.bats   # schnell, ohne DDEV
+bats tests/test.bats      # Integration mit echtem DDEV, nutzt ein isoliertes Cache-Verzeichnis
+```
+
+---
+
+## Das Image: `ghcr.io/avhulst/claude-code`
+
+`claude-code/Dockerfile` baut ein minimales Image, das nur das Claude-Code-Binary enthält
+und ausschließlich als `COPY --from`-Quelle dient.
+
+### Wie die tägliche Action arbeitet
+
+1. Liest die neueste Version via `npm view @anthropic-ai/claude-code version`.
+2. Prüft, ob dieser Version-Tag in GHCR bereits existiert. Wenn ja, **Abbruch ohne Push**.
 3. Sonst Multi-Arch-Build (`linux/amd64` + `linux/arm64`) und Push der Tags `latest`
    und `<version>`.
 
 Manuell erzwingen geht über *Run workflow* mit gesetztem `force`.
 
-## Aufräumen / Retention (nur 3 Images vorhalten)
+### GHCR-Sichtbarkeit
 
-Nach jedem erfolgreichen Push läuft ein `cleanup`-Job, der via
-`dataaxiom/ghcr-cleanup-action` **nur die 3 neuesten Releases behält** und ältere
-löscht — inklusive ihrer Multi-Arch-Kind-Manifeste. Genutzt wird hier bewusst diese
-Action und **nicht** `actions/delete-package-versions`, die Multi-Arch-Images
-beschädigt.
+Ein neu gepushtes GHCR-Paket ist standardmäßig *privat*. Damit `ddev add-on get` bei
+allen funktioniert und die CI-Tests laufen, das Paket auf **Public** stellen
+(*Package settings* → *Change visibility*). Bleibt es privat, braucht jede Maschine
+einmal `docker login ghcr.io` mit einem Token mit `read:packages`.
 
-Zählung: Pro Release entstehen zwar zwei Tags (`latest` + `<version>`), aber beide
-zeigen auf dieselbe Digest = **eine** GHCR-Version. `keep-n-tagged: 3` behält also die
-drei jüngsten Releases.
+### Aufräumen / Retention (nur 3 Images vorhalten)
 
-**Vor dem ersten Scharfschalten testen:** In `build.yml` im `cleanup`-Job einmal
-`dry-run: true` setzen, die Action manuell starten und im Job-Log prüfen, was *gelöscht
-würde*. Passt es, wieder auf `dry-run: false`. Die Zahl 3 änderst du über `keep-n-tagged`.
+Nach jedem erfolgreichen Push behält der `cleanup`-Job via
+`dataaxiom/ghcr-cleanup-action` **nur die 3 neuesten Releases** und löscht ältere,
+inklusive ihrer Multi-Arch-Kind-Manifeste. Bewusst nicht `actions/delete-package-versions`,
+die Multi-Arch-Images beschädigt.
 
-Hinweis zu Rechten: Für repo-gebundene Pakete reicht das eingebaute `GITHUB_TOKEN`. Liegt
-das Paket bei einer Organisation und ist nicht mit dem Repo verknüpft, hinterlege ein PAT
-mit `delete:packages` als Secret und gib es der Action via `token:` mit.
+Pro Release entstehen zwei Tags (`latest` + `<version>`) auf dieselbe Digest, also
+**eine** GHCR-Version. `keep-n-tagged: 3` behält damit die drei jüngsten Releases.
 
-## Hinweise
+**Vor dem Scharfschalten testen:** im `cleanup`-Job einmal `dry-run: true` setzen, die
+Action manuell starten und im Log prüfen, was gelöscht würde.
 
-- Das Binary ist glibc-dynamisch; sowohl das Carrier-Image (`debian:bookworm-slim`) als
-  auch der DDEV-Webserver sind Debian-basiert — passt.
-- Multi-Arch ist abgedeckt; `COPY --from` zieht automatisch die passende Architektur
-  (arm64 auf Apple Silicon, sonst amd64).
-- Der Webimage-Build läuft weiter bei `ddev start`/`restart`, falls neu gebaut werden
-  muss — dank Layer-Cache ist die `COPY` danach sofort durch.
+Für repo-gebundene Pakete reicht das eingebaute `GITHUB_TOKEN`. Liegt das Paket bei einer
+Organisation ohne Repo-Verknüpfung, ein PAT mit `delete:packages` als Secret hinterlegen
+und per `token:` übergeben.
+
+### Hinweise
+
+- Das Binary ist glibc-dynamisch. Carrier-Image (`debian:bookworm-slim`) und
+  DDEV-Webserver sind beide Debian-basiert.
+- `COPY --from` zieht automatisch die passende Architektur (arm64 auf Apple Silicon,
+  sonst amd64).
